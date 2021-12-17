@@ -34,6 +34,7 @@ class ASAAPI(object):
 
         """
         self.api_endpoint = "https://" + asa_ip + ":" + str(api_port) + f"/{context_name}/exec"
+        log.debug(f"API Endpoint: {self.api_endpoint}")
 
     def sanitize_command(self, command: list) -> str:
         """
@@ -46,7 +47,9 @@ class ASAAPI(object):
         # TODO: more sanitization of input
         sanitized_cmd = ""
         for item in command:
+            log.debug(f"Original Command: {item}")
             sanitized_cmd += "/" + urllib.parse.quote_plus(item)
+        log.debug(f"Sanitized Command: {sanitized_cmd}")
         return sanitized_cmd
 
     def call_asa_api(self, command=None, operation="get", data=""):
@@ -73,7 +76,7 @@ class ASAAPI(object):
 
     def get_curl_cmd(self, cmd):
         """
-        Given a command, sanitize, format, and print the equivelant curl command
+        Given a command, sanitize, format, and return the equivelant curl command
         :param cmd: command to execute on the ASA
         """
         curl = f"curl -u '{self.username}:{self.passwd}' -H 'User-Agent: {self.user_agent}' "
