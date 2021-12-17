@@ -4,9 +4,6 @@ import requests
 from requests.auth import HTTPBasicAuth
 import logging
 
-# from HTMLParser import HTMLParser
-from html.parser import HTMLParser
-
 log = logging.getLogger(__name__)
 
 
@@ -20,14 +17,14 @@ class ASAAPI(object):
         :param  verify: Verify certificate validity. Should always be "True" in production; "False" allows self-signed
         """
         self.api_endpoint = None
-        self.headers = {"Content-Type": "text/xml", "User-Agent": user_agent}
+        self.user_agent = user_agent
         self.response = None
         self.username = user
         self.passwd = passwd
         self.verify = verify
         return
 
-    def set_api_endpoint(self, asa_ip: str, api_port: int = 443, context_name: str = "admin") -> str:
+    def set_api_endpoint(self, asa_ip: str, api_port: int = 443, context_name: str = "admin") -> None:
         """
         Given an ASA IP address, port, type of command and context name (if applicable) create the URL endpoint needed
         :param asa_ip: The IP address of the interface where the HTTP server has been enabled
@@ -37,35 +34,49 @@ class ASAAPI(object):
 
         """
         self.api_endpoint = "https://" + asa_ip + ":" + str(api_port) + f"/{context_name}/exec"
-        return self.api_endpoint
 
-    def sanitize_command(self, command):
+    def sanitize_command(self, command: list) -> str:
         """
         When passing commands to the API, spaces need to be converted to '+' charactrers.
+        Also, when nested configuration items like setting the nameif of an interface are required,
+        concatonate the endpoint with the commands in the list
         Other sanitzation can happen here as well.
-        :param command: The command to be issued like "show version" or "write mem"
+        :param command: list of the command(s) to be issued like "show version" or "write mem"
         """
         # TODO: more sanitization of input
-        sanitized_cmd = urllib.parse.quote_plus(command)
+        sanitized_cmd = ""
+        for item in command:
+            sanitized_cmd += "/" + urllib.parse.quote_plus(item)
         return sanitized_cmd
 
-    def asa_api_get(self, command=None, data=""):
+    def call_asa_api(self, command=None, operation="get", data=""):
         """
         Make the ASDM/API call to the ASA
+        :param command: sanitized string that represents the command to be issued on the ASA
+        :param data: for future use
         """
         sanitized_commands = ""
-        for item in command:
-            sanitized_commands += "/" + self.sanitize_command(item)
-
+        sanitized_commands += self.sanitize_command(command)
         api_endpoint = self.api_endpoint + sanitized_commands if sanitized_commands else self.api_endpoint
 
-        r = requests.get(
-            api_endpoint,
-            auth=HTTPBasicAuth(self.username, self.passwd),
-            headers=self.headers,
-            verify=self.verify,
-        )
+        if operation == "get":
+            r = requests.get(
+                api_endpoint,
+                auth=HTTPBasicAuth(self.username, self.passwd),
+                headers={"Content-Type": "text/xml", "User-Agent": self.user_agent},
+                verify=self.verify,
+            )
         if r.status_code == 200:
             return r.text
         else:
             log.error(f"API call failed with status code:{r.status_code}")
+
+    def get_curl_cmd(self, cmd):
+        """
+        Given a command, sanitize, format, and print the equivelant curl command
+        :param cmd: command to execute on the ASA
+        """
+        curl = f"curl -u '{self.username}:{self.passwd}' -H 'User-Agent: {self.user_agent}' "
+        if not self.verify:
+            curl += "-k "
+        return f"{curl}{self.api_endpoint}{self.sanitize_command(cmd)}"
