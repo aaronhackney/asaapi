@@ -19,7 +19,7 @@ def main():
     if not verify:
         warnings.simplefilter("once")
 
-    # instantiate the interface an define the endpoint (ASA) IP and Port
+    # instantiate an ASAAPI class and define the endpoint (ASA) IP and Port
     asa_api = ASAAPI(user=user, passwd=passwd, verify=verify)
     asa_api.set_api_endpoint(ip, api_port=port)
 

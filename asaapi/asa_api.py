@@ -52,7 +52,7 @@ class ASAAPI(object):
     def call_asa_api(self, command=None, operation="get", data=""):
         """
         Make the ASDM/API call to the ASA
-        :param command: sanitized string that represents the command to be issued on the ASA
+        :param command: list that represents the command to be issued on the ASA
         :param data: for future use
         """
         sanitized_commands = ""
